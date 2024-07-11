@@ -6,7 +6,7 @@ import json
 from logging_setup import setup_logger
 from provenaclient import ProvenaClient, Config
 from provenaclient.auth.manager import LogType, Log
-from provenaclient.auth.implementations import DeviceFlow, OfflineFlow
+from provenaclient.auth.implementations import OfflineFlow
 from ProvenaInterfaces.SharedTypes import StatusResponse
 from ProvenaInterfaces.RegistryModels import RecordInfo
 from ProvenaInterfaces.RegistryAPI import VersionRequest, DomainInfoBase, ItemSubType
@@ -47,9 +47,15 @@ def set_github_action_output(output_name: str, output_value: str) -> None:
         output_name (str): The output name
         output_value (str): The output value
     """
-    f = open(os.path.abspath(os.environ["GITHUB_OUTPUT"]), "a")
-    f.write(f"{output_name}={output_value}")
-    f.close()
+    gh_out_path = os.environ.get("GITHUB_OUTPUT")
+    if not gh_out_path:
+        print(
+            "Cannot write GitHub output when GITHUB_OUTPUT env variable is not provided."
+        )
+    else:
+        f = open(os.path.abspath(gh_out_path), "a")
+        f.write(f"{output_name}={output_value}")
+        f.close()
 
 
 def setup_provena_client(settings: GithubInputs) -> ProvenaClient:
@@ -76,9 +82,54 @@ def setup_provena_client(settings: GithubInputs) -> ProvenaClient:
     return client
 
 
-async def produce_new_version_of_item(
+async def find_latest_version_of_item(
     client: ProvenaClient, log: logging.Logger, settings: GithubInputs
 ) -> Tuple[str, ItemSubType]:
+    """
+
+    Takes the client, logger and inputs and finds the latest version
+
+    Args:
+        client (ProvenaClient): The client to use
+        log (logging.Logger): The logger
+        inputs (GithubInputs): The inputs
+
+    Returns:
+        str: The ID of the newest version of existing item
+    """
+    # item id
+    id = settings.input_item_id
+
+    # fetch the item at generic level
+    log.debug(f"Fetching existing item with id {id}.")
+
+    latest = False
+    latest_id = id
+
+    while not latest:
+        # TODO error handle this
+        item = await client.registry.general_fetch_item(id=latest_id)
+
+        # check subtype
+        # TODO error handle this
+        assert item.item
+
+        # parse as base record info
+        record_info = RecordInfo.parse_obj(item.item)
+        subtype = record_info.item_subtype
+
+        # new version?
+        if record_info.versioning_info and record_info.versioning_info.next_version:
+            latest_id = record_info.versioning_info.next_version
+        else:
+            latest = True
+
+    return latest_id, subtype
+
+
+async def produce_new_version_of_item(
+    newest_id: str, client: ProvenaClient, log: logging.Logger, settings: GithubInputs
+) -> str:
     """
 
     Takes the client, logger and inputs and produces the new version.
@@ -92,7 +143,7 @@ async def produce_new_version_of_item(
         str: The ID of the new version of existing item
     """
     # item id
-    id = settings.input_item_id
+    id = newest_id
 
     # fetch the item at generic level
     log.debug(f"Fetching existing item with id {id}.")
@@ -115,7 +166,7 @@ async def produce_new_version_of_item(
         item_subtype=subtype,
     )
 
-    return response.new_version_id, subtype
+    return response.new_version_id
 
 
 async def update_details_of_item(
@@ -180,8 +231,17 @@ async def main() -> None:
     # setup client
     client = setup_provena_client(settings=settings)
 
+    # find latest version
+    # TODO implement this
+    newest_id, subtype = await find_latest_version_of_item(
+        client=client,
+        log=log,
+        settings=settings,
+    )
+
     # perform versioning
-    new_id, subtype = await produce_new_version_of_item(
+    new_id = await produce_new_version_of_item(
+        newest_id=newest_id,
         client=client,
         log=log,
         settings=settings,
