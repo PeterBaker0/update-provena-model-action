@@ -15,12 +15,18 @@ inputs:
   item_id:
     description: "The id of the item to create a new version for."
     required: true
-  reason:
-    description: "What reason should be provided for the update?"
+  version_reason:
+    description: "What reason should be provided for the creation of the new version?"
     required: true
+  update_reason:
+    description: "What reason should be provided for the update of metadata attributes?"
+    required: false
   attribute_updates:
     description: "Would you like to apply a set of updates after versioning? If so this JSON will be merged with the updated item domain info and an update applied. Please ensure this is a valid serialised JSON string."
     required: false
+outputs:
+  new_id: 
+    description: "The ID of the new version of the item"
 runs:
   using: "docker"
   image: "Dockerfile"

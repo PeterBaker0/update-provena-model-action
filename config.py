@@ -12,7 +12,9 @@ class GithubInputs(BaseSettings):
     # The item id to create new version for
     input_item_id: str
     # The reason to provide
-    input_reason: str
+    input_version_reason: str
+    # The reason to provide
+    input_update_reason: str | None
     # The set of attribute updates to apply after versioning, if any
     input_attribute_updates: str | None
     # The log level to display - defaults to WARNING - see https://docs.python.org/3/library/logging.html#levels
@@ -20,5 +22,5 @@ class GithubInputs(BaseSettings):
 
     # use .env file optionally for local testing
     class Config:
-            env_file = '.env'
-            env_file_encoding = 'utf-8'
+        env_file = ".env"
+        env_file_encoding = "utf-8"
