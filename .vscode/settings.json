@@ -1,0 +1,7 @@
+{
+    "python.testing.pytestArgs": [
+        "tests"
+    ],
+    "python.analysis.diagnosticMode": "workspace",
+    "mypy.runUsingActiveInterpreter": true,
+}

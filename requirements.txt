@@ -1,0 +1,2 @@
+pydantic[dotenv]==1.10.12
+provenaclient==0.10.3
